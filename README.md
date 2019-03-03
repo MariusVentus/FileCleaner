@@ -1,2 +1,2 @@
 # FileCleaner
-A quick console program to make "cleaner" copies of text csv files. 
+A quick console program which creates a "cleaner" copy of a file.

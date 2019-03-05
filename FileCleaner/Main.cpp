@@ -1,10 +1,14 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <sstream>
+#include "Settings.h"
 
 void DisplayExit(void);
 void DisplayHeader(void);
 void FileCleaner(void);
+void FlagHandler(std::string& str, Settings& inSet);
+void InputHandler(std::string& inStr, Settings& inSet);
 void ReadLineAndClean(std::ifstream& dataStream, std::string& dataString);
 bool ValidFile(const std::string& str);
 bool YnQ(const std::string& out);
@@ -30,16 +34,22 @@ void DisplayExit(void) {
 
 void DisplayHeader(void) {
 	std::cout << "FileReader V1.0 \n\n";
+	std::cout << "Flags which can modify the clean include:\n";
+	std::cout << "[/to] Change Filetype. [FileName /to filetype] \n";
+
+
 }
 
 void FileCleaner(void) {
+	Settings set;
 	//Check FileName
 	std::string fileName;
 	do {
 		fileName.clear();
-		std::cout << "Enter Filename (including .txt filetype): ";
+		std::cout << "\nEnter Filename (including .txt filetype): ";
 		std::cin.clear();
 		std::getline(std::cin, fileName);
+		InputHandler(fileName, set);
 	} while (!ValidFile(fileName));
 	std::ifstream in(fileName);
 
@@ -48,13 +58,16 @@ void FileCleaner(void) {
 	unsigned fileNum = 0;
 	do {
 		cloneName = fileName;
-		cloneName.insert(cloneName.size() - 4, "Clean");
+		cloneName.insert(cloneName.find_last_of("."), "Clean");
 		if (fileNum > 0) {
-			cloneName.insert(cloneName.size() - 4, std::to_string(fileNum));
+			cloneName.insert(cloneName.find_last_of("."), std::to_string(fileNum));
 		}
 		fileNum++;
 	} while (ValidFile(cloneName));
-
+	if (set.changeFT == true) {
+		cloneName.erase(cloneName.find_last_of(".") + 1);
+		cloneName.insert(cloneName.find_last_of(".") + 1, set.newFT);
+	}
 	std::cout << cloneName << "\n\n";
 
 	//Copy and Clean
@@ -66,6 +79,56 @@ void FileCleaner(void) {
 		out << line << "\n";
 	} while (!line.empty());
 	out.close();
+}
+
+void FlagHandler(std::string& str, Settings& inSet)
+{
+	//Remove Double Whitespace.
+	while (str.find("  ") != std::string::npos) {
+		str.erase(str.find("  "), 1);
+	}
+
+	//Flags
+	//Change FileType
+	if (str.find("to") != std::string::npos && str.find(".") != std::string::npos) {
+		std::stringstream toType(str);
+		std::string type;
+		std::getline(toType, type, '.');
+		std::getline(toType, type, ' ');
+		inSet.changeFT = true;
+		inSet.newFT = type;
+	}
+	else if (str.find("to") != std::string::npos && str.find(".") == std::string::npos) {
+		std::cout << "New file type not recognized.\n";
+	}
+}
+
+void InputHandler(std::string& inStr, Settings& inSet)
+{
+	//Remove Leading Whitespace.
+	while (inStr.find(" ") == 0) {
+		inStr.erase(inStr.find(" "), 1);
+	}
+	//Check Flags, Protect intiial Flag.
+	if (inStr.find("/") != std::string::npos) {
+		inStr.insert(inStr.find("/"), "/");
+		std::stringstream inputStream(inStr);
+		std::string flags;
+		std::getline(inputStream, inStr, '/');
+		do {
+			std::getline(inputStream, flags, '/');
+			FlagHandler(flags, inSet);
+		} while (!inputStream.eof());
+	}
+
+	//Remove trailing Whitespace from FileName.
+	while (inStr.find_last_of(" ") == inStr.size() - 1 && !inStr.empty()) {
+		inStr.pop_back();
+	}
+	//BadFile
+	if (!ValidFile(inStr)) {
+		std::cout << "Source file name not recognized. \n";
+	}
 }
 
 void ReadLineAndClean(std::ifstream& dataStream, std::string& dataString)
@@ -90,7 +153,7 @@ void ReadLineAndClean(std::ifstream& dataStream, std::string& dataString)
 		while (dataString.find(",") == 0) {
 			dataString.erase(dataString.find(","), 1);
 		}
-		if(dataString.find_last_of(",") == dataString.size() - 1 && !dataString.empty()) {
+		if (dataString.find_last_of(",") == dataString.size() - 1 && !dataString.empty()) {
 			dataString.pop_back();
 		}
 	} while (!dataStream.eof() && dataString.empty());

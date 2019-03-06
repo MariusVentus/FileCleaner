@@ -17,7 +17,6 @@ public:
 	bool keepLC = false;
 	//Keep Trailing Commas
 	bool keepTC = false;
-
 	//Change Filetype
 	bool changeFT = false;
 	std::string newFT;

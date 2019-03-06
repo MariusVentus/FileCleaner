@@ -6,20 +6,21 @@
 
 void DisplayExit(void);
 void DisplayHeader(void);
+void DisplayManual(void);
 void FileCleaner(void);
 void FlagHandler(std::string& str, Settings& inSet);
 void InputHandler(std::string& inStr, Settings& inSet);
-void ReadLineAndClean(std::ifstream& dataStream, std::string& dataString);
+void ReadLineAndClean(std::ifstream& dataStream, std::string& dataString, const Settings& inSet);
 bool ValidFile(const std::string& str);
-bool YnQ(const std::string& out);
 
 
 int main() {
 	DisplayHeader();
 
-	do {
+	while(true){
 		FileCleaner();
-	} while (YnQ("Would you like to clean another file?"));
+		std::cout << "Would you like to clean another file?";
+	}
 
 	DisplayExit();
 	return 0;
@@ -34,10 +35,21 @@ void DisplayExit(void) {
 
 void DisplayHeader(void) {
 	std::cout << "FileReader V1.0 \n\n";
+	DisplayManual();
+
+}
+
+void DisplayManual(void)
+{
 	std::cout << "Flags which can modify the clean include:\n";
 	std::cout << "[/to] Change Filetype. [FileName /to filetype] \n";
-
-
+	std::cout << "[/sc] Don't convert semi-colons to commas. [FileName /sc] \n";
+	std::cout << "[/ws] Don't remove whitespace. [FileName /ws] \n";
+	std::cout << "[/nl] Don't remove empty lines. [FileName /nl] \n";
+	std::cout << "[/dc] Don't remove double commas. [FileName /dc] \n";
+	std::cout << "[/lc] Don't remove leading commas. [FileName /lc] \n";
+	std::cout << "[/tc] Don't remove trailing commas. [FileName /tc] \n";
+	//std::cout << "[/cw] Convert commas to white space. [FileName /cw] \n";
 }
 
 void FileCleaner(void) {
@@ -46,7 +58,7 @@ void FileCleaner(void) {
 	std::string fileName;
 	do {
 		fileName.clear();
-		std::cout << "\nEnter Filename (including .txt filetype): ";
+		std::cout << "\nEnter Filename (including filetype): ";
 		std::cin.clear();
 		std::getline(std::cin, fileName);
 		InputHandler(fileName, set);
@@ -71,13 +83,45 @@ void FileCleaner(void) {
 	std::cout << cloneName << "\n\n";
 
 	//Copy and Clean
+	bool firstRun = true;
+	bool firstRunEcho = true;
 	std::string line;
 	std::ofstream out(cloneName, std::ofstream::app);
+	line.clear();
 	do {
+		if (!line.empty()) {
+			if (set.keepNL == true) {
+				if (firstRunEcho == false) {
+					out << line;
+				}
+				else if (firstRunEcho == true && line.find("\n") != 0) {
+					out << line;
+					firstRunEcho = false;
+				}
+				else {
+					firstRunEcho = false;
+				}
+			}
+			else {
+				out << line;
+			}
+		}
 		line.clear();
-		ReadLineAndClean(in, line);
-		out << line << "\n";
-	} while (!line.empty());
+		ReadLineAndClean(in, line, set);
+		if (set.keepNL == false && !line.empty() && firstRun == false) {
+			out << "\n";
+		}
+		else if (set.keepNL == true && line.find("\n") == std::string::npos && firstRun == false) {
+			out << "\n";
+		}
+		if (firstRun) {
+			firstRun = false;
+		}
+	} while (!in.eof() && !line.empty());
+
+	if (!line.empty()) {
+		out << line;
+	}
 	out.close();
 }
 
@@ -101,6 +145,35 @@ void FlagHandler(std::string& str, Settings& inSet)
 	else if (str.find("to") != std::string::npos && str.find(".") == std::string::npos) {
 		std::cout << "New file type not recognized.\n";
 	}
+	//Don't treat Semi-Colons as Commas
+	else if (str.find("sc") != std::string::npos) {
+		inSet.semiCasComma = false;
+	}
+	//Keep WhiteSpace
+	else if (str.find("ws") != std::string::npos) {
+		inSet.keepWS = true;
+	}
+	//Keep Extra New Lines 
+	else if (str.find("nl") != std::string::npos) {
+		inSet.keepNL = true;
+	}
+	//Keep Double Commas
+	else if (str.find("dc") != std::string::npos) {
+		inSet.keepDC = true;
+	}
+	//Keep Leading Commas
+	else if (str.find("lc") != std::string::npos) {
+		inSet.keepLC = true;
+	}
+	//Keep Trailing Commas
+	else if (str.find("tc") != std::string::npos) {
+		inSet.keepTC = true;
+	}
+	//Convert Commas to White Space
+	else if (str.find("cw") != std::string::npos) {
+		inSet.commaToWS = true;
+	}
+
 }
 
 void InputHandler(std::string& inStr, Settings& inSet)
@@ -131,30 +204,50 @@ void InputHandler(std::string& inStr, Settings& inSet)
 	}
 }
 
-void ReadLineAndClean(std::ifstream& dataStream, std::string& dataString)
+void ReadLineAndClean(std::ifstream& dataStream, std::string& dataString, const Settings& inSet)
 {
 	do {
 		std::getline(dataStream, dataString);
 
-		//SemiColon as Comma < May make a setting >
-		while (dataString.find(";") != std::string::npos) {
-			dataString.replace(dataString.find(";"), 1, ",");
+		//SemiColon as Comma
+		if (inSet.semiCasComma == true) {
+			while (dataString.find(";") != std::string::npos) {
+				dataString.replace(dataString.find(";"), 1, ",");
+			}
 		}
-		//Remove White Space, Empty New Lines, Leading and Double Commas.
-		while (dataString.find(" ") != std::string::npos) {
-			dataString.erase(dataString.find(" "), 1);
+		//Remove White Space
+		if (inSet.keepWS == false) {
+			while (dataString.find(" ") != std::string::npos) {
+				dataString.erase(dataString.find(" "), 1);
+			}
+			//Tabs included in that. 
+			while (dataString.find("\t") != std::string::npos) {
+				dataString.erase(dataString.find("\t"), 1);
+			}
 		}
-		while (dataString.find("\t") != std::string::npos) {
-			dataString.erase(dataString.find("\t"), 1);
+		//Remove Double Comma
+		if (inSet.keepDC == false) {
+			while (dataString.find(",,") != std::string::npos) {
+				dataString.erase(dataString.find(",,"), 1);
+			}
 		}
-		while (dataString.find(",,") != std::string::npos) {
-			dataString.erase(dataString.find(",,"), 1);
+		//Remove Leading Comma
+		if (inSet.keepLC == false) {
+			while (dataString.find(",") == 0) {
+				dataString.erase(dataString.find(","), 1);
+			}
 		}
-		while (dataString.find(",") == 0) {
-			dataString.erase(dataString.find(","), 1);
+		//Remove Trailing Comma
+		if (inSet.keepTC == false) {
+			while (dataString.find_last_of(",") == dataString.size() - 1 && !dataString.empty()) {
+				dataString.pop_back();
+			}
 		}
-		if (dataString.find_last_of(",") == dataString.size() - 1 && !dataString.empty()) {
-			dataString.pop_back();
+		//Remove Extra Newlines
+		if (inSet.keepNL == true) {
+			if (!dataStream.eof() && dataString.empty()) {
+				dataString = "\n";
+			}
 		}
 	} while (!dataStream.eof() && dataString.empty());
 }
@@ -169,29 +262,3 @@ bool ValidFile(const std::string& str) {
 	}
 }
 
-bool YnQ(const std::string& out)
-{
-	std::string answer;
-	int errorCount = 0;
-	while (errorCount < 3) {
-
-		std::cout << out << "\n";
-		std::cin.clear();
-		std::getline(std::cin, answer);
-		std::cout << "\n";
-		if (answer == "y" || answer == "Y" || answer == "yes" || answer == "Yes") {
-			return true;
-		}
-		else if (answer == "n" || answer == "N" || answer == "No" || answer == "no") {
-			return false;
-		}
-		else {
-			errorCount++;
-			if (errorCount < 3) {
-				std::cout << "I'm sorry, I didn't understand. Allow me to reset the question. Please Re-enter. \n";
-			}
-		}
-	}
-	std::cout << "I'm sorry, I didn't understand. Assuming No.\n \n";
-	return false;
-}

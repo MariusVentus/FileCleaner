@@ -34,14 +34,16 @@ void DisplayExit(void) {
 }
 
 void DisplayHeader(void) {
-	std::cout << "FileReader V1.0 \n\n";
+	std::cout << "FileReader V1.1-alpha \n";
+	std::cout << "Author: MariusVentus \n\n";
 	DisplayManual();
 
 }
 
 void DisplayManual(void)
 {
-	std::cout << "Flags which can modify the clean include:\n";
+	std::cout << "-----Manual-----\n";
+	std::cout << "Add flags after the filename to alter how it cleans. \n";
 	std::cout << "[/to] Change Filetype. [FileName /to filetype] \n";
 	std::cout << "[/sc] Don't convert semi-colons to commas. [FileName /sc] \n";
 	std::cout << "[/ws] Don't remove whitespace. [FileName /ws] \n";
@@ -49,7 +51,9 @@ void DisplayManual(void)
 	std::cout << "[/dc] Don't remove double commas. [FileName /dc] \n";
 	std::cout << "[/lc] Don't remove leading commas. [FileName /lc] \n";
 	std::cout << "[/tc] Don't remove trailing commas. [FileName /tc] \n";
-	//std::cout << "[/cw] Convert commas to white space. [FileName /cw] \n";
+	std::cout << "[/cw] Convert commas to white space. [FileName /cw] \n";
+	std::cout << "[/man] Display Manual [/man] \n";
+
 }
 
 void FileCleaner(void) {
@@ -61,7 +65,12 @@ void FileCleaner(void) {
 		std::cout << "\nEnter Filename (including filetype): ";
 		std::cin.clear();
 		std::getline(std::cin, fileName);
-		InputHandler(fileName, set);
+		if (fileName.find("man") != std::string::npos) {
+			DisplayManual();
+		}
+		else {
+			InputHandler(fileName, set);
+		}
 	} while (!ValidFile(fileName));
 	std::ifstream in(fileName);
 
@@ -173,7 +182,6 @@ void FlagHandler(std::string& str, Settings& inSet)
 	else if (str.find("cw") != std::string::npos) {
 		inSet.commaToWS = true;
 	}
-
 }
 
 void InputHandler(std::string& inStr, Settings& inSet)
@@ -247,6 +255,12 @@ void ReadLineAndClean(std::ifstream& dataStream, std::string& dataString, const 
 		if (inSet.keepNL == true) {
 			if (!dataStream.eof() && dataString.empty()) {
 				dataString = "\n";
+			}
+		}
+		//Comma to White Space
+		if (inSet.commaToWS == true) {
+			while (dataString.find(",") != std::string::npos) {
+				dataString.replace(dataString.find(","), 1, " ");
 			}
 		}
 	} while (!dataStream.eof() && dataString.empty());

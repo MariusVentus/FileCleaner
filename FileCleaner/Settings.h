@@ -22,7 +22,9 @@ public:
 	std::string newFT;
 	//Convert Commas to White Space. 
 	bool commaToWS = false;
-
+	//Duplicate lines X times.  
+	bool duplicateLines = false;
+	unsigned dupCount = 0;
 private:
 
 };

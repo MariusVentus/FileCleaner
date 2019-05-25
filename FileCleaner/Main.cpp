@@ -52,6 +52,7 @@ void DisplayManual(void)
 	std::cout << "[/lc] Don't remove leading commas. [FileName /lc] \n";
 	std::cout << "[/tc] Don't remove trailing commas. [FileName /tc] \n";
 	std::cout << "[/cw] Convert commas to white space. [FileName /cw] \n";
+	std::cout << "[/dup] Duplicate lines X number of times. [FileName /dup X] \n";
 	std::cout << "[/man] Display Manual [/man] \n";
 
 }
@@ -101,10 +102,30 @@ void FileCleaner(void) {
 		if (!line.empty()) {
 			if (set.keepNL == true) {
 				if (firstRunEcho == false) {
-					out << line;
+					if (set.duplicateLines == true) {
+						for (unsigned i = 0; i <= set.dupCount; i++) {
+							out << line;
+							if (i != set.dupCount) {
+								out << "\n";
+							}
+						}
+					}
+					else {
+						out << line;
+					}
 				}
 				else if (firstRunEcho == true && line.find("\n") != 0) {
-					out << line;
+					if (set.duplicateLines == true) {
+						for (unsigned i = 0; i <= set.dupCount; i++) {
+							out << line;
+							if (i != set.dupCount) {
+								out << "\n";
+							}
+						}
+					}
+					else {
+						out << line;
+					}
 					firstRunEcho = false;
 				}
 				else {
@@ -112,7 +133,17 @@ void FileCleaner(void) {
 				}
 			}
 			else {
-				out << line;
+				if (set.duplicateLines == true) {
+					for (unsigned i = 0; i <= set.dupCount; i++) {
+						out << line;
+						if (i != set.dupCount) {
+							out << "\n";
+						}
+					}
+				}
+				else {
+					out << line;
+				}
 			}
 		}
 		line.clear();
@@ -129,7 +160,17 @@ void FileCleaner(void) {
 	} while (!in.eof() && !line.empty());
 
 	if (!line.empty()) {
-		out << line;
+		if (set.duplicateLines == true) {
+			for (unsigned i = 0; i <= set.dupCount; i++) {
+				out << line;
+				if (i != set.dupCount) {
+					out << "\n";
+				}
+			}
+		}
+		else {
+			out << line;
+		}
 	}
 	out.close();
 }
@@ -181,6 +222,15 @@ void FlagHandler(std::string& str, Settings& inSet)
 	//Convert Commas to White Space
 	else if (str.find("cw") != std::string::npos) {
 		inSet.commaToWS = true;
+	}
+	//Duplicate Lines X times.
+	else if (str.find("dup") != std::string::npos) {
+		std::stringstream toCount(str);
+		std::string count;
+		inSet.duplicateLines = true;
+		std::getline(toCount, count, ' ');
+		std::getline(toCount, count, ' ');
+		inSet.dupCount = std::stoi(count);
 	}
 }
 
@@ -251,7 +301,7 @@ void ReadLineAndClean(std::ifstream& dataStream, std::string& dataString, const 
 				dataString.pop_back();
 			}
 		}
-		//Remove Extra Newlines
+		//Keep Extra Newlines
 		if (inSet.keepNL == true) {
 			if (!dataStream.eof() && dataString.empty()) {
 				dataString = "\n";
